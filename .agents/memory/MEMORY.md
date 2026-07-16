@@ -1,0 +1,1 @@
+- [Vite+Express middlewareMode on Replit](vite-express-middleware-replit.md) — HMR websocket needs shared http.Server + clientPort:443, and server.watch must ignore .local/.cache/.agents or reloads never stop.

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Bloquear assets desnecessários para crawlers
+Disallow: /src/
+Disallow: /.env
+Disallow: /node_modules/
+
+# Sitemap
+Sitemap: https://radioswavebr.netlify.app/sitemap.xml
+
+# Cache hints
+Crawl-delay: 1

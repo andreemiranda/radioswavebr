@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- SEO Básico -->
+    <title>Radio Wave Brasil - Ouça Rádios Brasileiras Online ao Vivo Grátis</title>
+    <meta name="description" content="Ouça mais de mil rádios brasileiras ao vivo e de graça: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias. Player rápido, sem cadastro e sem anúncios. Instale como app no celular ou computador." />
+    <meta name="keywords" content="rádio online brasil, rádio ao vivo, ouvir rádio online, sertanejo online, pagode ao vivo, mpb online, rock brasileiro, gospel online, funk ao vivo, notícias rádio, rádios do brasil, radio wave brasil, radiowave, app de rádio" />
+    <meta name="author" content="André Miranda" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="generator" content="Vite + React" />
+    <link rel="canonical" href="https://radioswavebr.netlify.app/" />
+    <meta name="geo.region" content="BR" />
+    <meta name="geo.placename" content="Brasil" />
+    <meta name="language" content="Portuguese" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="revisit-after" content="1 days" />
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Radio Wave Brasil" />
+    <meta property="og:url" content="https://radioswavebr.netlify.app/" />
+    <meta property="og:title" content="Radio Wave Brasil - Ouça Rádios Brasileiras Online ao Vivo" />
+    <meta property="og:description" content="Mais de mil rádios brasileiras ao vivo em um só lugar: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias. Player moderno, grátis e sem anúncios." />
+    <meta property="og:image" content="https://radioswavebr.netlify.app/og-image-1200x630.png" />
+    <meta property="og:image:secure_url" content="https://radioswavebr.netlify.app/og-image-1200x630.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Radio Wave Brasil - player de rádios brasileiras ao vivo" />
+    <meta property="og:logo" content="https://radioswavebr.netlify.app/logo.png" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:updated_time" content="2026-07-15T00:00:00Z" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@radioswavebr" />
+    <meta name="twitter:creator" content="@radioswavebr" />
+    <meta name="twitter:title" content="Radio Wave Brasil - Ouça Rádios Brasileiras ao Vivo" />
+    <meta name="twitter:description" content="Mais de mil rádios brasileiras ao vivo: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias. Grátis, sem anúncios e sem cadastro." />
+    <meta name="twitter:image" content="https://radioswavebr.netlify.app/og-image-1200x630.png" />
+    <meta name="twitter:image:alt" content="Radio Wave Brasil - player de rádios brasileiras ao vivo" />
+
+    <!-- PWA / Mobile / Theme -->
+    <meta name="theme-color" content="#FFDF00" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#002776" />
+    <meta name="background-color" content="#002776" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="application-name" content="Radio Wave Brasil" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
+
+    <!-- Apple / iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RadioWave" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon.png" />
+
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-startup-image" href="/apple-splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-1620x2160.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
+
+    <!-- Windows / Microsoft -->
+    <meta name="msapplication-TileColor" content="#0B0F19" />
+    <meta name="msapplication-TileImage" content="/mstile-144x144.png" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-starturl" content="/" />
+    <meta name="msapplication-navbutton-color" content="#FFDF00" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- JSON-LD (Schema.org) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://radioswavebr.netlify.app/#app",
+          "name": "Radio Wave Brasil",
+          "url": "https://radioswavebr.netlify.app/",
+          "description": "Ouça mais de mil rádios brasileiras ao vivo: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias, grátis e sem anúncios.",
+          "applicationCategory": "MusicApplication",
+          "applicationSubCategory": "RadioApplication",
+          "operatingSystem": "Web, Android, iOS, Windows",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "inLanguage": "pt-BR",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+          "image": "https://radioswavebr.netlify.app/og-image-1200x630.png",
+          "screenshot": "https://radioswavebr.netlify.app/og-image-1200x630.png",
+          "author": {
+            "@type": "Person",
+            "name": "André Miranda"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "@id": "https://radioswavebr.netlify.app/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://radioswavebr.netlify.app/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://radioswavebr.netlify.app/#organization",
+          "name": "Radio Wave Brasil",
+          "url": "https://radioswavebr.netlify.app/",
+          "logo": {
+            "@type": "ImageObject",
+            "@id": "https://radioswavebr.netlify.app/#logo",
+            "url": "https://radioswavebr.netlify.app/logo.png",
+            "contentUrl": "https://radioswavebr.netlify.app/logo.png",
+            "width": 512,
+            "height": 512,
+            "caption": "Radio Wave Brasil"
+          },
+          "image": { "@id": "https://radioswavebr.netlify.app/#logo" },
+          "sameAs": [
+            "https://github.com/andreemiranda/radioswavebrasil"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://radioswavebr.netlify.app/#website",
+          "name": "Radio Wave Brasil",
+          "url": "https://radioswavebr.netlify.app/",
+          "inLanguage": "pt-BR",
+          "publisher": { "@id": "https://radioswavebr.netlify.app/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://radioswavebr.netlify.app/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://radioswavebr.netlify.app/#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Início",
+              "item": "https://radioswavebr.netlify.app/"
+            }
+          ]
+        },
+        {
+          "@type": "ImageObject",
+          "@id": "https://radioswavebr.netlify.app/#og-image",
+          "url": "https://radioswavebr.netlify.app/og-image-1200x630.png",
+          "contentUrl": "https://radioswavebr.netlify.app/og-image-1200x630.png",
+          "width": 1200,
+          "height": 630,
+          "caption": "Radio Wave Brasil — player de rádios brasileiras ao vivo"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Performance: preconnect & dns-prefetch -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin />
+    <link rel="dns-prefetch" href="https://de1.api.radio-browser.info" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+    <link rel="preload" as="image" href="/favicon-32x32.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Google AdSense -->
+    <meta name="google-adsense-account" content="ca-pub-7059730627018047" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7059730627018047" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

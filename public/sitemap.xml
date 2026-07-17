@@ -3,13 +3,13 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
-    <loc>https://radioswavebr.netlify.app/</loc>
+    <loc>https://radioswave.netlify.app/</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://radioswavebr.netlify.app/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://radioswave.netlify.app/"/>
     <image:image>
-      <image:loc>https://radioswavebr.netlify.app/og-image-1200x630.png</image:loc>
+      <image:loc>https://radioswave.netlify.app/og-image-1200x630.png</image:loc>
       <image:title>Radio Wave Brasil — player de rádios brasileiras ao vivo</image:title>
       <image:caption>Ouça as melhores rádios do Brasil ao vivo. Sertanejo, Pagode, MPB, Rock, Gospel e muito mais.</image:caption>
     </image:image>

@@ -7,7 +7,7 @@ Disallow: /.env
 Disallow: /node_modules/
 
 # Sitemap
-Sitemap: https://radioswavebr.netlify.app/sitemap.xml
+Sitemap: https://radioswave.netlify.app/sitemap.xml
 
 # Cache hints
 Crawl-delay: 1

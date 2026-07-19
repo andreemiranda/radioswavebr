@@ -18,6 +18,16 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Security headers — applied to every response
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    next();
+  });
+
   // Health check
   app.get("/health", (_, res) => res.json({ 
     status: "ok",
@@ -122,10 +132,41 @@ async function startServer() {
     }
   });
 
-  // Alias for radioService compatibility
+  // Direct handler (no redirect) — redirect() adds a round-trip that can fail
+  // behind PWA service-workers or aggressive proxy caches, causing empty pages
+  // in the production build around the point where the app switches from local
+  // to API data.  We replicate the brazil handler logic here exactly so both
+  // routes behave identically without any HTTP redirect involved.
   app.get("/api/stations/bycountry/Brazil", async (req, res) => {
-    const { limit, offset } = req.query;
-    res.redirect(`/api/stations/brazil?limit=${limit || 24}&offset=${offset || 0}`);
+    try {
+      const { limit = 24, offset = 0 } = req.query;
+      const limitNum  = Number(limit);
+      const offsetNum = Number(offset);
+
+      // Same limit+1 probe as /api/stations/brazil (see comment there).
+      const response = await fetch(
+        `${RADIO_BROWSER_BASE}/stations/bycountry/Brazil?limit=${limitNum + 1}&offset=${offsetNum}&order=votes&reverse=true&hidebroken=true`,
+        { headers: { 'User-Agent': 'RadioWaveBrasil/1.0' } }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Radio Browser API responded with status ${response.status}`);
+      }
+
+      const rawData = await response.json();
+      const hasMore = Array.isArray(rawData) && rawData.length > limitNum;
+      const data    = hasMore ? rawData.slice(0, limitNum) : rawData;
+
+      res.json({
+        success: true,
+        data,
+        total: offsetNum + data.length + (hasMore ? 1 : 0),
+      });
+    } catch (error: any) {
+      console.warn("⚠️ bycountry/Brazil Error:", error.message);
+      res.json({ success: false, data: [], total: 0,
+        error: "Erro ao carregar rádios do Brasil." });
+    }
   });
 
   // Tags (Popular tags)

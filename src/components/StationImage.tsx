@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Radio } from 'lucide-react';
-import { RadioStation } from '../types';
 import { cn } from '../lib/utils';
 
 interface StationImageProps {
-  station: RadioStation;
+  /** station prop kept for API compatibility — icon is always the official app brand */
+  station?: unknown;
   size?: number;
   className?: string;
 }
@@ -42,45 +42,17 @@ const DefaultRadioIcon = ({ size }: { size: number }) => (
 );
 
 /**
- * Component to display station images with proper fallbacks.
- * Shows a branded Brazilian radio icon if the image is missing or broken.
+ * Component to display station images.
+ * Always shows the official app branded icon — standardized across all stations
+ * (local and API) for a consistent, uniform look and zero external HTTP requests.
  */
 export const StationImage: React.FC<StationImageProps> = ({ 
-  station, 
   size = 52,
   className = "" 
 }) => {
-  const [error, setError] = useState(false);
-  const hasFavicon = station.favicon && station.favicon.startsWith('http');
-
-  if (error || !hasFavicon) {
-    return (
-      <div className={cn("shrink-0", className)}>
-        <DefaultRadioIcon size={size} />
-      </div>
-    );
-  }
-
   return (
-    <div 
-      className={cn(
-        "relative overflow-hidden flex items-center justify-center bg-slate-200 dark:bg-white/10 rounded-xl shrink-0 border border-white/5 shadow-sm transition-transform group-hover:scale-105",
-        className
-      )}
-      style={{ width: size, height: size }}
-    >
-      <img
-        src={station.favicon}
-        alt={station.name}
-        onError={() => setError(true)}
-        className="w-full h-full object-cover"
-        referrerPolicy="no-referrer"
-        loading="lazy"
-      />
-      <BrazilFlagBadge 
-        className="absolute bottom-1 right-1 z-10" 
-        style={{ width: size * 0.35, height: 'auto' }}
-      />
+    <div className={cn("shrink-0", className)}>
+      <DefaultRadioIcon size={size} />
     </div>
   );
 };

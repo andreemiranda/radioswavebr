@@ -1,0 +1,258 @@
+Prompt para IA de Desenvolvimento – Implementação de Reprodução Persistente e Recuperação Automática do Áudio para Funcionamento Contínuo
+Objetivo
+
+Implementar um sistema avançado de reprodução contínua de áudio que permita ao aplicativo permanecer tocando por períodos extremamente longos (várias horas ou até dias), minimizando interrupções e recuperando automaticamente a reprodução sempre que ocorrer qualquer falha.
+
+Durante testes prolongados foi observado que, após determinado tempo, o áudio simplesmente deixa de tocar, mesmo quando o aplicativo permanece aberto e sem interação do usuário.
+
+O objetivo desta implementação é tornar o player altamente resiliente, garantindo uma experiência semelhante à de aplicativos profissionais de rádio e streaming, nos quais o áudio permanece em execução indefinidamente ou é restabelecido automaticamente em poucos instantes caso ocorra qualquer interrupção.
+
+Objetivos Gerais
+
+Realizar uma auditoria completa em toda a arquitetura de reprodução do aplicativo.
+
+Identificar qualquer fator que possa provocar a interrupção da reprodução após longos períodos.
+
+A implementação deverá ser baseada em boas práticas de streaming contínuo, tolerância a falhas, recuperação automática e gerenciamento eficiente de conexões.
+
+ETAPA 1 — Auditoria Completa do Player
+
+Realizar uma análise técnica completa do sistema de reprodução.
+
+Verificar:
+
+gerenciamento do elemento HTMLAudioElement;
+MediaSource;
+HLS;
+DASH;
+Web Audio API;
+buffers;
+eventos do navegador;
+gerenciamento de memória;
+coleta de lixo (Garbage Collection);
+suspensão de timers;
+políticas de economia de energia;
+gerenciamento de foco da aba;
+Page Visibility API;
+ciclo de vida da aplicação.
+
+Identificar qualquer evento que possa interromper a reprodução.
+
+ETAPA 2 — Identificação da Causa
+
+Investigar automaticamente se a interrupção ocorre por:
+
+timeout da conexão;
+encerramento do socket;
+perda do stream;
+encerramento do buffer;
+erro do player;
+limitação do navegador;
+suspensão da aba;
+política de economia de energia;
+perda de foco;
+erro de decodificação;
+erro HTTP;
+falha do streaming;
+perda de conexão com a Internet;
+interrupção do servidor da rádio;
+comportamento esperado do navegador.
+
+Documentar a causa encontrada.
+
+ETAPA 3 — Pesquisa de Soluções Persistentes
+
+Pesquisar e implementar as melhores práticas utilizadas por players profissionais de streaming.
+
+Avaliar soluções como:
+
+reconexão automática inteligente;
+monitoramento contínuo do fluxo de áudio;
+heartbeat de reprodução;
+watchdog do player;
+auto recovery;
+reconnect exponencial;
+reconexão imediata quando apropriado;
+reabertura automática da conexão;
+restauração transparente do stream;
+reutilização do buffer quando possível.
+
+Caso existam bibliotecas especializadas que aumentem a estabilidade do streaming, avaliar sua adoção.
+
+ETAPA 4 — Monitor de Reprodução
+
+Implementar um monitor permanente da reprodução.
+
+Esse monitor deverá verificar continuamente:
+
+se o áudio continua tocando;
+se o tempo de reprodução continua avançando;
+se o buffer permanece ativo;
+se o elemento de áudio entrou em estado de espera indefinida;
+se ocorreu travamento silencioso.
+
+Nunca depender apenas dos eventos padrão do navegador.
+
+ETAPA 5 — Recuperação Automática
+
+Sempre que for detectado que o áudio parou inesperadamente, executar automaticamente um processo de recuperação.
+
+Esse processo deverá:
+
+identificar a emissora atualmente selecionada;
+preservar volume e configurações do usuário;
+encerrar corretamente a conexão anterior;
+criar uma nova conexão com o mesmo stream;
+reiniciar a reprodução imediatamente.
+
+Toda a recuperação deverá ocorrer de forma transparente ao usuário.
+
+ETAPA 6 — Reconexão Inteligente
+
+Caso a conexão seja perdida:
+
+realizar novas tentativas automaticamente;
+evitar loops excessivos;
+utilizar estratégia inteligente de reconexão;
+diferenciar falhas temporárias de falhas permanentes.
+
+Quando o stream voltar a responder, retomar imediatamente a reprodução.
+
+ETAPA 7 — Persistência de Longa Duração
+
+Projetar o player para suportar reprodução contínua durante períodos prolongados.
+
+O sistema deverá minimizar riscos de interrupção relacionados a:
+
+vazamentos de memória;
+crescimento excessivo do buffer;
+acúmulo de listeners;
+objetos órfãos;
+conexões antigas não encerradas;
+timers acumulados.
+
+O consumo de memória deverá permanecer estável durante toda a execução.
+
+ETAPA 8 — Monitoramento do Tempo de Reprodução
+
+Implementar uma rotina que monitore continuamente:
+
+currentTime;
+readyState;
+networkState;
+buffered;
+paused;
+ended;
+stalled;
+waiting;
+suspend;
+error.
+
+Caso qualquer indicador demonstre paralisação inesperada, iniciar imediatamente a recuperação automática.
+
+ETAPA 9 — Tratamento de Eventos
+
+Implementar tratamento completo para eventos como:
+
+error;
+stalled;
+suspend;
+abort;
+waiting;
+emptied;
+ended;
+canplay;
+canplaythrough;
+durationchange;
+progress;
+pause inesperado.
+
+Cada evento deverá possuir estratégia específica de recuperação.
+
+ETAPA 10 — Compatibilidade
+
+Garantir funcionamento consistente em:
+
+Google Chrome;
+Microsoft Edge;
+Firefox;
+Brave;
+Opera;
+Android;
+PWA;
+Replit;
+Ambiente Local;
+Node.js;
+cPanel;
+VPS;
+Docker.
+ETAPA 11 — Execução em Segundo Plano
+
+Sempre que permitido pelo navegador, manter a reprodução mesmo quando:
+
+a aba perder o foco;
+o usuário alternar entre aplicativos;
+a tela do dispositivo apagar;
+outra guia estiver ativa.
+
+Respeitar as limitações impostas pelos navegadores e sistemas operacionais.
+
+Quando a reprodução for interrompida por essas limitações, retomá-la automaticamente assim que a execução voltar a ser permitida.
+
+ETAPA 12 — Logs Técnicos
+
+Criar logs temporários para desenvolvimento contendo:
+
+motivo da interrupção;
+tempo total de reprodução;
+quantidade de reconexões;
+eventos recebidos;
+erros do player;
+tempo de recuperação.
+
+Esses logs não deverão ser exibidos ao usuário final.
+
+ETAPA 13 — Testes de Estresse
+
+Executar testes simulando:
+
+várias horas de reprodução contínua;
+perda temporária da Internet;
+retorno da conexão;
+troca de emissoras;
+mudança de abas;
+suspensão temporária da página;
+streams instáveis.
+
+Confirmar que o player recupera automaticamente a reprodução.
+
+ETAPA 14 — Experiência do Usuário
+
+Todo o processo de monitoramento e recuperação deverá ocorrer em segundo plano.
+
+O usuário não deverá precisar:
+
+pressionar Play novamente;
+trocar de rádio;
+atualizar a página;
+reiniciar o aplicativo.
+
+A recuperação deverá ser praticamente instantânea e imperceptível.
+
+ETAPA 15 — Validação Final
+
+Ao concluir a implementação, confirmar que:
+
+o áudio pode permanecer em reprodução por períodos extremamente longos;
+interrupções inesperadas são detectadas automaticamente;
+o sistema identifica quando o stream deixa de evoluir;
+a reconexão ocorre automaticamente;
+a mesma emissora é retomada sempre que possível;
+o usuário não precisa realizar nenhuma ação manual;
+o consumo de memória permanece estável;
+não existem vazamentos de memória;
+não existem conexões órfãs;
+o player suporta longos períodos de funcionamento contínuo.
+Objetivo Final
+
+Entregar um sistema de reprodução de áudio altamente resiliente, persistente e auto-recuperável, capaz de manter a reprodução contínua por tempo indeterminado. Caso qualquer interrupção ocorra — seja por falha do stream, timeout, suspensão do navegador, perda temporária de conexão ou qualquer outro motivo — o player deverá detectar automaticamente a condição, restabelecer a conexão com a emissora atual e retomar a reprodução em poucos instantes, sem exigir qualquer intervenção do usuário, proporcionando uma experiência equivalente à de aplicativos profissionais de rádio e streaming.

@@ -14,6 +14,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { CUSTOM_STATIONS } from '../data/customStations';
+import { MobileBottomNav } from '../components/MobileBottomNav';
 
 const LIMIT = 24;
 
@@ -37,7 +38,8 @@ const Home: React.FC = () => {
     playStation, 
     toggleFavorite, 
     isFavorite, 
-    favorites 
+    favorites,
+    setCurrentList,
   } = usePlayer();
 
   // --- QUERIES ---
@@ -81,9 +83,18 @@ const Home: React.FC = () => {
         ? await fetchApiPage(remaining, 0)
         : { data: [] as RadioStation[], total: 0, success: true };
 
+      const mergedData = [...customSlice, ...apiResult.data];
+
+      // Degrade gracefully on mixed pages: show custom data even if the API
+      // portion failed. Only throw (for React Query retry) when we have zero
+      // stations at all.
+      if (!apiResult.success && mergedData.length === 0) {
+        throw new Error('Falha ao carregar estações — tentando novamente…');
+      }
+
       return {
-        success: apiResult.success,
-        data: [...customSlice, ...apiResult.data],
+        success: mergedData.length > 0,
+        data: mergedData,
         total: apiResult.total + customCount,
       };
     }
@@ -94,8 +105,15 @@ const Home: React.FC = () => {
     const apiOffset = itemsBeforeThisPage - customCount;
     const apiResult = await fetchApiPage(LIMIT, apiOffset);
 
+    // On a pure-API page, if the call failed (network error, server error),
+    // throw so React Query can apply its retry policy instead of immediately
+    // rendering an empty list.
+    if (!apiResult.success) {
+      throw new Error('Falha ao carregar estações — tentando novamente…');
+    }
+
     return {
-      success: apiResult.success,
+      success: true,
       data: apiResult.data,
       total: apiResult.total + customCount,
     };
@@ -109,6 +127,9 @@ const Home: React.FC = () => {
     isFetching 
   } = useQuery({
     queryKey: ['stations', activeTab, searchQuery, selectedState, selectedGenre, page],
+    // Retry up to 2 times on transient API/network failures before showing an error.
+    retry: 2,
+    retryDelay: 1200,
     queryFn: async () => {
       if (activeTab === 'favorites') return { data: favorites, total: favorites.length, success: true };
 
@@ -147,6 +168,14 @@ const Home: React.FC = () => {
     },
     placeholderData: (previousData) => previousData,
   });
+
+  // Keep the player's auto-skip logic in sync with whatever list is currently
+  // visible on screen so it can navigate to the correct next station.
+  useEffect(() => {
+    if (stationsData?.data) {
+      setCurrentList(stationsData.data);
+    }
+  }, [stationsData?.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- HANDLERS ---
 
@@ -187,6 +216,15 @@ const Home: React.FC = () => {
     if (!stationsData || typeof stationsData.total !== 'number') return 0;
     return Math.ceil(stationsData.total / LIMIT);
   }, [stationsData]);
+
+  // Guard: if a transient API error recalculates totalPages downward, clamp
+  // the current page so the user never lands on an empty/error page when
+  // valid data still exists at an earlier page.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={cn(
@@ -327,12 +365,13 @@ const Home: React.FC = () => {
           </div>
         )}
 
+        {/* Desktop / tablet tab bar — hidden on mobile (bottom nav handles it there) */}
         <nav className={cn(
-          "flex items-center gap-8 mb-10 overflow-x-auto no-scrollbar scroll-smooth border-b",
+          "hidden sm:flex items-center gap-8 mb-10 overflow-x-auto no-scrollbar scroll-smooth border-b",
           isBrazil ? "border-[#E2E8F0]/80" : "border-theme-border"
         )}>
           {[
-            { id: 'guia' as const, label: '📋 Geral' },
+            { id: 'guia' as const, label: '📋 Início' },
             { id: 'search' as const, label: '🔍 Populares' },
             { id: 'favorites' as const, label: '⭐ Favoritos' }
           ].map(tab => (
@@ -442,6 +481,14 @@ const Home: React.FC = () => {
       </main>
 
       <Footer />
+
+      {/* Mobile-only bottom navigation (Android-native tab bar) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setPage(1); }}
+        isPlaying={isPlaying}
+        favoritesCount={favorites.length}
+      />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

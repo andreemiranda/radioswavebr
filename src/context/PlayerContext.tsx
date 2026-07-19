@@ -91,6 +91,20 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const hlsRef = useRef<Hls | null>(null);
   const dashRef = useRef<any>(null);
 
+  // intendedPlayRef — true while the USER wants audio playing. Set to true on
+  // any programmatic play(), false only when the user explicitly pauses via
+  // togglePlay(). Survives browser-forced pauses (background/throttle/lock
+  // screen) so reconnect logic can distinguish "user paused" from "browser
+  // suspended us".
+  const intendedPlayRef = useRef(false);
+  // reconnectingRef — true while forceReconnect() is executing a new play()
+  // call. Guards against cascading hPause→reconnect→hPause loops that would
+  // otherwise happen because audio.pause() inside forceReconnect fires hPause.
+  const reconnectingRef = useRef(false);
+  // bgReconnectTimerRef — pending setTimeout handle for a background-induced
+  // reconnect so we can cancel it if a newer reconnect supersedes it.
+  const bgReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // --- AUTO-SKIP REFS ---
   // Stations (by id) that have already been tried and failed in the current
   // auto-navigation cycle. Cleared whenever a station plays successfully or the
@@ -107,6 +121,10 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const MAX_AUTO_RETRIES = 5;
   const RETRY_DELAY_MS = 3000;
   const STALL_TIMEOUT_MS = 8000; // if playback doesn't advance for this long, force a reconnect
+
+  // Diagnostic timing: tracks when playStation() was last called so we can
+  // log time-to-first-audio in the 'play' event handler below.
+  const playClickTimeRef = useRef<number>(0);
 
   // --- FAVORITES STATE ---
   const [favorites, setFavorites] = useState<RadioStation[]>(() => {
@@ -140,7 +158,39 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (isHls) {
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: true, loader: ProxyingHlsLoader as any });
+        const hls = new Hls({
+          enableWorker: true,
+          loader: ProxyingHlsLoader as any,
+          // ── Low-latency live-stream tuning ────────────────────────────────
+          // Default maxBufferLength is 30 s — way too much for live radio:
+          // the player waits to fill that buffer before emitting audio, which
+          // is the primary cause of the "slow start" on HLS stations.
+          // Reducing it to 4 s gives near-instant first audio while still
+          // keeping enough headroom to absorb short network hiccups.
+          maxBufferLength:         4,
+          maxMaxBufferLength:      8,
+          maxBufferHole:           0.3,
+          highBufferWatchdogPeriod: 2,
+          nudgeMaxRetry:           5,
+          // Start at auto quality (ABR) — avoids the brief stall that can
+          // happen when hls.js initially picks a quality level that mismatches
+          // the actual available bandwidth.
+          startLevel:              -1,
+          // Optimistic initial bandwidth estimate (500 kbps) so ABR doesn't
+          // start at the lowest quality while ramping up its estimate.
+          abrEwmaDefaultEstimate:  500_000,
+          // Faster failure detection — don't wait the full default 10 s for a
+          // dead manifest or segment before surfacing an error to the retry logic.
+          manifestLoadingTimeOut:  6_000,
+          manifestLoadingMaxRetry: 2,
+          levelLoadingTimeOut:     6_000,
+          fragLoadingTimeOut:      8_000,
+          // ── Long-session memory management ───────────────────────────────
+          // Clear already-played segments immediately (backBuffer = 0) so
+          // memory stays stable during multi-hour listening sessions.
+          // Without this, HLS.js accumulates all segments in RAM indefinitely.
+          backBufferLength:        0,
+        });
         hlsRef.current = hls;
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data?.fatal) scheduleErrorRetryRef.current();
@@ -149,8 +199,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         hls.attachMedia(audio);
       } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
         // Safari (and some WebKit-based browsers): native HLS support.
+        // No audio.load() — play() will kick it off atomically.
         audio.src = url;
-        audio.load();
       } else {
         // No HLS support at all in this browser — surface it as a normal
         // playback failure (clear "Sem Sinal" + retry) instead of dead silence.
@@ -159,6 +209,24 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } else if (isDash) {
       const player = dashjs.MediaPlayer().create();
       dashRef.current = player;
+      // Tune DASH for fast live-stream startup (same philosophy as HLS above).
+      player.updateSettings({
+        streaming: {
+          buffer: {
+            // Aim to start playback after buffering just 2 s of audio instead
+            // of the default 12 s.  For live radio this is more than enough.
+            initialBufferLevel:       2,
+            bufferTimeAtTopQuality:   4,
+            bufferTimeAtTopQualityLongForm: 4,
+            fastSwitchEnabled:        true,
+          },
+          abr: {
+            // Same optimistic bandwidth seed as HLS — avoids starting at rock-
+            // bottom quality during the estimate warm-up.
+            initialBitrate:           { audio: 128, video: 0 },
+          },
+        },
+      });
       // Route every DASH sub-request (manifest + segments) through the same
       // mixed-content proxy used for HLS/direct streams.
       player.extend('RequestModifier', function () {
@@ -169,8 +237,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } else {
       // Native playback: MP3, AAC, OGG/Opus, FLAC, WebM — everything a plain
       // <audio> element already understands.
+      //
+      // Do NOT call audio.load() here.  With preload="none", setting src does
+      // not start any network activity.  Calling play() right after will load-
+      // and-play atomically in a single pipeline step, which is measurably
+      // faster than the load() + play() two-step (one fewer DOM event cycle,
+      // no intermediate "loading" stall before the play request is queued).
       audio.src = url;
-      audio.load();
     }
   };
 
@@ -195,11 +268,6 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     // Mark current station as failed in this navigation cycle
     failedInCycleRef.current.add(station.id);
-    console.debug(
-      `[RadioWave][${ts}] Auto-skip: "${station.name}" failed after ${MAX_AUTO_RETRIES} attempts.`,
-      `Failed in cycle: ${failedInCycleRef.current.size}`,
-      `Type: ${local ? 'local' : 'API'}`
-    );
 
     // Build the ordered group to navigate within:
     //   Priority 1 – stations of the same type visible in the current UI list
@@ -210,11 +278,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (group.length === 0 && local) {
       group = [...CUSTOM_STATIONS];
-      console.debug(`[RadioWave][${ts}] Fallback to full CUSTOM_STATIONS (${group.length} stations)`);
     }
 
     if (group.length === 0) {
-      console.warn(`[RadioWave][${ts}] No navigable group found — stopping auto-cycle.`);
       setAudioError(true);
       setAllStationsOffline(true);
       return;
@@ -232,20 +298,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const candidate = group[idx];
       if (!failedInCycleRef.current.has(candidate.id)) {
         nextStation = candidate;
-        console.debug(
-          `[RadioWave][${ts}] Auto-skip: "${station.name}" → "${nextStation.name}"`,
-          `(${failedInCycleRef.current.size}/${group.length} stations tried)`
-        );
         break;
       }
     }
 
     if (!nextStation) {
       // Every station in the group has been exhausted this cycle
-      console.warn(
-        `[RadioWave][${ts}] All ${group.length} ${local ? 'local' : 'API'} stations exhausted.`,
-        'Stopping auto-cycle to avoid resource waste.'
-      );
       setAudioError(true);
       setAllStationsOffline(true);
       return;
@@ -289,16 +347,11 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (retryCountRef.current < MAX_AUTO_RETRIES) {
       retryCountRef.current += 1;
-      console.debug(
-        `[RadioWave] Retry ${retryCountRef.current}/${MAX_AUTO_RETRIES} for "${playingRef.current?.name}"`,
-        `(delay: ${RETRY_DELAY_MS * retryCountRef.current}ms)`
-      );
       retryTimerRef.current = setTimeout(() => {
         forceReconnect(true);
       }, RETRY_DELAY_MS * retryCountRef.current);
     } else {
       // All retries exhausted — hand off to auto-skip
-      console.debug(`[RadioWave] All ${MAX_AUTO_RETRIES} retries exhausted for "${playingRef.current?.name}" — triggering auto-skip`);
       autoSkipToNextRef.current();
     }
   };
@@ -315,10 +368,22 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const audio = audioRef.current;
     const station = playingRef.current;
     if (!audio || !station) return;
+    // Prevent cascading reconnects: if one is already in flight, bail out.
+    if (reconnectingRef.current) return;
+    reconnectingRef.current = true;
+
+    // Cancel any pending background reconnect timer that might race with us.
+    if (bgReconnectTimerRef.current) {
+      clearTimeout(bgReconnectTimerRef.current);
+      bgReconnectTimerRef.current = null;
+    }
+
     audio.pause();
     attachSource(audio, station, isRetryAttempt);
     audio.play()
       .then(() => {
+        reconnectingRef.current = false;
+        intendedPlayRef.current = true;
         setIsPlaying(true);
         setAudioError(false);
         retryCountRef.current = 0;
@@ -326,7 +391,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         failedInCycleRef.current.clear();
         setAllStationsOffline(false);
       })
-      .catch(() => setAudioError(true));
+      .catch((e: Error) => {
+        reconnectingRef.current = false;
+        // AbortError = a newer attachSource() interrupted this play() — ignore,
+        // the next play() attempt is already queued by the new call.
+        if (e?.name === 'AbortError') return;
+        setAudioError(true);
+      });
   };
 
   // Create audio element on mount
@@ -345,7 +416,28 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       failedInCycleRef.current.clear();
       setAllStationsOffline(false);
     };
-    const hPause = () => setIsPlaying(false);
+    const hPause = () => {
+      setIsPlaying(false);
+      // If we're mid-reconnect, this pause was triggered by our own audio.pause()
+      // call inside forceReconnect — ignore it, the new play() is on its way.
+      if (reconnectingRef.current) return;
+      // If the user intentionally paused via togglePlay(), intendedPlayRef is
+      // false — respect that and don't auto-resume.
+      if (!intendedPlayRef.current || !playingRef.current) return;
+
+      // The browser forcibly paused us (background tab throttle, minimized
+      // window, screen lock, OS media interruption). Schedule a reconnect so
+      // audio resumes as soon as the browser allows it.
+      if (bgReconnectTimerRef.current) clearTimeout(bgReconnectTimerRef.current);
+      bgReconnectTimerRef.current = setTimeout(() => {
+        bgReconnectTimerRef.current = null;
+        if (intendedPlayRef.current && playingRef.current && !reconnectingRef.current) {
+          lastProgressTimeRef.current = Date.now();
+          retryCountRef.current = 0;
+          forceReconnect(false);
+        }
+      }, 800);
+    };
     const hCanPlay = () => {
       setAudioError(false);
       retryCountRef.current = 0;
@@ -388,28 +480,47 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- STALL WATCHDOG ---
-  // Some streams (notably HE-AAC/"aacp" Shoutcast feeds) can stop delivering
-  // audible audio a second or two in without ever firing an 'error' event —
-  // the connection stays open but playback silently freezes. Detect that by
-  // watching for currentTime to stop advancing while we believe we're playing,
-  // and force a reconnect just like a real playback error would.
+  // Runs every 2 s and handles two failure modes:
+  //   1. audio.paused unexpectedly (browser-forced: background tab, minimized
+  //      window, screen lock) while intendedPlayRef is true — reconnect.
+  //   2. audio is "playing" but currentTime stopped advancing (frozen stream,
+  //      silent Shoutcast HE-AAC) — reconnect after STALL_TIMEOUT_MS.
+  // Uses refs (not React state) so it always sees the latest values even from
+  // inside a stale interval closure.
   useEffect(() => {
     if (stallWatchdogRef.current) clearInterval(stallWatchdogRef.current);
 
     stallWatchdogRef.current = setInterval(() => {
       const audio = audioRef.current;
-      if (!audio || !isPlaying || !playingRef.current) return;
-      if (audio.paused) return;
+      if (!audio || !playingRef.current) return;
+      if (!intendedPlayRef.current) return;   // user paused — respect it
+      if (reconnectingRef.current) return;    // reconnect already in flight
 
+      // Case 1 — audio paused by browser (background / throttle / lock screen).
+      // hPause already schedules a reconnect; the watchdog is a belt-and-
+      // suspenders fallback for when that timer was cleared or never fired.
+      if (audio.paused) {
+        // Only act if the bgReconnect timer isn't already pending.
+        if (!bgReconnectTimerRef.current) {
+          lastProgressTimeRef.current = Date.now();
+          if (retryCountRef.current < MAX_AUTO_RETRIES) {
+            retryCountRef.current += 1;
+            forceReconnect(true);
+          } else {
+            autoSkipToNextRef.current();
+          }
+        }
+        return;
+      }
+
+      // Case 2 — currentTime frozen (stream stalled without an error event).
       const stalledFor = Date.now() - lastProgressTimeRef.current;
       if (stalledFor > STALL_TIMEOUT_MS) {
         lastProgressTimeRef.current = Date.now(); // avoid retry storms
         if (retryCountRef.current < MAX_AUTO_RETRIES) {
           retryCountRef.current += 1;
-          console.debug(`[RadioWave] Stall detected for "${playingRef.current?.name}" (${stalledFor}ms). Retry ${retryCountRef.current}/${MAX_AUTO_RETRIES}`);
           forceReconnect(true);
         } else {
-          console.debug(`[RadioWave] Stall: all ${MAX_AUTO_RETRIES} retries exhausted for "${playingRef.current?.name}" — triggering auto-skip`);
           autoSkipToNextRef.current();
         }
       }
@@ -418,22 +529,28 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return () => {
       if (stallWatchdogRef.current) clearInterval(stallWatchdogRef.current);
     };
-  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- SCREEN WAKE LOCK ---
-  // Keeps playback stable through screen lock/screensaver on devices where
-  // suspending the display also throttles the media pipeline. Best-effort:
-  // silently no-ops where unsupported (desktop browsers, older Safari, etc).
+  // --- SCREEN WAKE LOCK + BACKGROUND / LOCK-SCREEN PERSISTENCE ---
+  // Single effect that owns all page-lifecycle events so listeners are never
+  // duplicated. Runs once on mount; reads only refs so it never goes stale.
   useEffect(() => {
     const requestWakeLock = async () => {
       try {
-        // @ts-ignore - Wake Lock API is not in all TS lib versions
-        if ('wakeLock' in navigator && isPlaying) {
+        // @ts-ignore — WakeLock API missing from some TS lib versions
+        if ('wakeLock' in navigator && intendedPlayRef.current) {
           // @ts-ignore
-          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          const lock = await navigator.wakeLock.request('screen');
+          wakeLockRef.current = lock;
+          // Re-request if the OS releases the lock (e.g. screen turned off and
+          // back on, or the browser released it during background throttling).
+          lock.addEventListener('release', () => {
+            wakeLockRef.current = null;
+            // Re-acquire next time the page becomes visible and we're playing.
+          });
         }
       } catch {
-        // Unsupported or denied — playback continues via MediaSession regardless.
+        // Unsupported or denied — MediaSession controls still work.
       }
     };
 
@@ -444,22 +561,101 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
     };
 
-    if (isPlaying) {
-      requestWakeLock();
-    } else {
-      releaseWakeLock();
-    }
+    // ── Attempt a reconnect using current ref values (no closure staleness) ──
+    const attemptReconnectIfNeeded = (reason: string) => {
+      if (!intendedPlayRef.current || !playingRef.current) return;
+      if (reconnectingRef.current) return;
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isPlaying) {
-        requestWakeLock();
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      requestWakeLock();
+
+      if (audio.paused) {
+        if (bgReconnectTimerRef.current) clearTimeout(bgReconnectTimerRef.current);
+        lastProgressTimeRef.current = Date.now();
+        retryCountRef.current = 0;
+        forceReconnect(false);
       }
     };
+
+    // ── visibilitychange ─────────────────────────────────────────────────────
+    // Fires when the user switches tabs, minimises the window, or the OS brings
+    // the page back to the foreground after throttling.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        attemptReconnectIfNeeded('Tab became visible');
+      }
+      // When hiding: release WakeLock — browser may already do this, but being
+      // explicit avoids keeping the screen on unnecessarily.
+      if (document.visibilityState === 'hidden') {
+        releaseWakeLock();
+      }
+    };
+
+    // ── Page Lifecycle API: freeze / resume ──────────────────────────────────
+    // 'freeze' fires just before Chrome freezes a background page to save CPU.
+    // 'resume' fires when it thaws — audio is almost always paused at this point.
+    const handleFreeze = () => {
+    };
+    const handleResume = () => {
+      attemptReconnectIfNeeded('Page resumed from freeze');
+    };
+
+    // ── pageshow / pagehide ──────────────────────────────────────────────────
+    // 'pageshow' fires when a page is restored from the bfcache (back/forward
+    // navigation on mobile), which is a common cause of silent audio loss.
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        // Page was restored from bfcache — treat as a fresh resume.
+        attemptReconnectIfNeeded('Page restored from bfcache');
+      }
+    };
+
+    // ── online ───────────────────────────────────────────────────────────────
+    // When the device regains network (e.g. coming out of airplane mode or a
+    // tunnel), existing stream connections are dead — reconnect immediately.
+    const handleOnline = () => {
+      attemptReconnectIfNeeded('Network came back online');
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('freeze', handleFreeze);
+    document.addEventListener('resume', handleResume);
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('online', handleOnline);
+
+    // Acquire WakeLock immediately if already playing when this effect mounts.
+    if (intendedPlayRef.current) requestWakeLock();
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('freeze', handleFreeze);
+      document.removeEventListener('resume', handleResume);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('online', handleOnline);
+      releaseWakeLock();
     };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-acquire WakeLock whenever playback starts; release when it stops.
+  useEffect(() => {
+    if (isPlaying && !wakeLockRef.current) {
+      (async () => {
+        try {
+          // @ts-ignore
+          if ('wakeLock' in navigator) {
+            // @ts-ignore
+            const lock = await navigator.wakeLock.request('screen');
+            wakeLockRef.current = lock;
+            lock.addEventListener('release', () => { wakeLockRef.current = null; });
+          }
+        } catch { /* unsupported */ }
+      })();
+    } else if (!isPlaying && wakeLockRef.current) {
+      wakeLockRef.current.release?.().catch(() => {});
+      wakeLockRef.current = null;
+    }
   }, [isPlaying]);
 
   // --- PERSISTENCE EFFECTS ---
@@ -499,13 +695,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       hasRestoredRef.current = true;
       attachSource(audioRef.current, playing);
 
+      intendedPlayRef.current = true;
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
           setNeedsResume(false);
         })
         .catch(() => {
-          console.info('[RadioWave] Autoplay blocked. Will resume on first interaction.');
           setNeedsResume(true);
         });
     } else {
@@ -519,6 +715,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const resume = () => {
       if (!audioRef.current || !needsResume) return;
+      intendedPlayRef.current = true;
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
@@ -594,7 +791,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       });
 
       navigator.mediaSession.setActionHandler('play', () => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(console.error);
+        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => {});
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
@@ -606,8 +803,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         audioRef.current?.pause();
         setIsPlaying(false);
       });
-    } catch (error) {
-      console.error('MediaSession Error:', error);
+    } catch (_) {
+      // MediaSession API not fully supported — ignore gracefully
     }
 
     return () => {
@@ -654,6 +851,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (playing?.id === station.id) {
       togglePlay();
     } else {
+      // Record click time for time-to-first-audio diagnostic log.
+      playClickTimeRef.current = Date.now();
       // Manual station selection: cancel any in-progress retry/auto-skip,
       // reset all failure tracking, and start fresh for the new station.
       retryCountRef.current = 0;
@@ -665,6 +864,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setPlaying(station);
       setAudioError(false);
       if (audioRef.current) {
+        intendedPlayRef.current = true;
+        reconnectingRef.current = false; // fresh station — reset guard
         audioRef.current.pause();
         attachSource(audioRef.current, station);
         audioRef.current.volume = muted ? 0 : volume;
@@ -685,9 +886,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!audioRef.current || !playing) return;
     
     if (isPlaying) {
+      // Explicit user pause — mark intent so hPause doesn't auto-reconnect.
+      intendedPlayRef.current = false;
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      intendedPlayRef.current = true;
       audioRef.current.play()
         .then(() => setIsPlaying(true))
         .catch(() => setAudioError(true));
@@ -717,6 +921,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const retry = () => {
     if (playing && audioRef.current) {
+      intendedPlayRef.current = true;
+      reconnectingRef.current = false; // reset guard so forceReconnect can run
       retryCountRef.current = 0;
       lastProgressTimeRef.current = Date.now();
       lastCurrentTimeRef.current = 0;

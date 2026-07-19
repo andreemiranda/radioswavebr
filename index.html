@@ -13,7 +13,7 @@
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow" />
     <meta name="generator" content="Vite + React" />
-    <link rel="canonical" href="https://radioswave.netlify.app/" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
     <meta name="geo.region" content="BR" />
     <meta name="geo.placename" content="Brasil" />
     <meta name="language" content="Portuguese" />
@@ -24,16 +24,16 @@
     <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Radio Wave Brasil" />
-    <meta property="og:url" content="https://radioswave.netlify.app/" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
     <meta property="og:title" content="Radio Wave Brasil - Ouça Rádios Brasileiras Online ao Vivo" />
     <meta property="og:description" content="Mais de mil rádios brasileiras ao vivo em um só lugar: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias. Player moderno, grátis e sem anúncios." />
-    <meta property="og:image" content="https://radioswave.netlify.app/og-image-1200x630.png" />
-    <meta property="og:image:secure_url" content="https://radioswave.netlify.app/og-image-1200x630.png" />
+    <meta property="og:image" content="%VITE_SITE_URL%/og-image-1200x630.png" />
+    <meta property="og:image:secure_url" content="%VITE_SITE_URL%/og-image-1200x630.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Radio Wave Brasil - player de rádios brasileiras ao vivo" />
-    <meta property="og:logo" content="https://radioswave.netlify.app/logo.png" />
+    <meta property="og:logo" content="%VITE_SITE_URL%/logo.png" />
     <meta property="og:locale" content="pt_BR" />
     <meta property="og:updated_time" content="2026-07-15T00:00:00Z" />
 
@@ -43,7 +43,7 @@
     <meta name="twitter:creator" content="@radioswavebr" />
     <meta name="twitter:title" content="Radio Wave Brasil - Ouça Rádios Brasileiras ao Vivo" />
     <meta name="twitter:description" content="Mais de mil rádios brasileiras ao vivo: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias. Grátis, sem anúncios e sem cadastro." />
-    <meta name="twitter:image" content="https://radioswave.netlify.app/og-image-1200x630.png" />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/og-image-1200x630.png" />
     <meta name="twitter:image:alt" content="Radio Wave Brasil - player de rádios brasileiras ao vivo" />
 
     <!-- PWA / Mobile / Theme -->
@@ -99,9 +99,9 @@
       "@graph": [
         {
           "@type": "WebApplication",
-          "@id": "https://radioswave.netlify.app/#app",
+          "@id": "%VITE_SITE_URL%/#app",
           "name": "Radio Wave Brasil",
-          "url": "https://radioswave.netlify.app/",
+          "url": "%VITE_SITE_URL%/",
           "description": "Ouça mais de mil rádios brasileiras ao vivo: Sertanejo, Pagode, MPB, Rock, Gospel, Funk e Notícias, grátis e sem anúncios.",
           "applicationCategory": "MusicApplication",
           "applicationSubCategory": "RadioApplication",
@@ -110,77 +110,77 @@
           "inLanguage": "pt-BR",
           "isAccessibleForFree": true,
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
-          "image": "https://radioswave.netlify.app/og-image-1200x630.png",
-          "screenshot": "https://radioswave.netlify.app/og-image-1200x630.png",
+          "image": "%VITE_SITE_URL%/og-image-1200x630.png",
+          "screenshot": "%VITE_SITE_URL%/og-image-1200x630.png",
           "author": {
             "@type": "Person",
             "name": "André Miranda"
           },
           "publisher": {
             "@type": "Organization",
-            "@id": "https://radioswave.netlify.app/#organization"
+            "@id": "%VITE_SITE_URL%/#organization"
           },
           "potentialAction": {
             "@type": "SearchAction",
             "target": {
               "@type": "EntryPoint",
-              "urlTemplate": "https://radioswave.netlify.app/?q={search_term_string}"
+              "urlTemplate": "%VITE_SITE_URL%/?q={search_term_string}"
             },
             "query-input": "required name=search_term_string"
           }
         },
         {
           "@type": "Organization",
-          "@id": "https://radioswave.netlify.app/#organization",
+          "@id": "%VITE_SITE_URL%/#organization",
           "name": "Radio Wave Brasil",
-          "url": "https://radioswave.netlify.app/",
+          "url": "%VITE_SITE_URL%/",
           "logo": {
             "@type": "ImageObject",
-            "@id": "https://radioswave.netlify.app/#logo",
-            "url": "https://radioswave.netlify.app/logo.png",
-            "contentUrl": "https://radioswave.netlify.app/logo.png",
+            "@id": "%VITE_SITE_URL%/#logo",
+            "url": "%VITE_SITE_URL%/logo.png",
+            "contentUrl": "%VITE_SITE_URL%/logo.png",
             "width": 512,
             "height": 512,
             "caption": "Radio Wave Brasil"
           },
-          "image": { "@id": "https://radioswave.netlify.app/#logo" },
+          "image": { "@id": "%VITE_SITE_URL%/#logo" },
           "sameAs": [
             "https://github.com/andreemiranda/radioswavebrasil"
           ]
         },
         {
           "@type": "WebSite",
-          "@id": "https://radioswave.netlify.app/#website",
+          "@id": "%VITE_SITE_URL%/#website",
           "name": "Radio Wave Brasil",
-          "url": "https://radioswave.netlify.app/",
+          "url": "%VITE_SITE_URL%/",
           "inLanguage": "pt-BR",
-          "publisher": { "@id": "https://radioswave.netlify.app/#organization" },
+          "publisher": { "@id": "%VITE_SITE_URL%/#organization" },
           "potentialAction": {
             "@type": "SearchAction",
             "target": {
               "@type": "EntryPoint",
-              "urlTemplate": "https://radioswave.netlify.app/?q={search_term_string}"
+              "urlTemplate": "%VITE_SITE_URL%/?q={search_term_string}"
             },
             "query-input": "required name=search_term_string"
           }
         },
         {
           "@type": "BreadcrumbList",
-          "@id": "https://radioswave.netlify.app/#breadcrumb",
+          "@id": "%VITE_SITE_URL%/#breadcrumb",
           "itemListElement": [
             {
               "@type": "ListItem",
               "position": 1,
               "name": "Início",
-              "item": "https://radioswave.netlify.app/"
+              "item": "%VITE_SITE_URL%/"
             }
           ]
         },
         {
           "@type": "ImageObject",
-          "@id": "https://radioswave.netlify.app/#og-image",
-          "url": "https://radioswave.netlify.app/og-image-1200x630.png",
-          "contentUrl": "https://radioswave.netlify.app/og-image-1200x630.png",
+          "@id": "%VITE_SITE_URL%/#og-image",
+          "url": "%VITE_SITE_URL%/og-image-1200x630.png",
+          "contentUrl": "%VITE_SITE_URL%/og-image-1200x630.png",
           "width": 1200,
           "height": 630,
           "caption": "Radio Wave Brasil — player de rádios brasileiras ao vivo"

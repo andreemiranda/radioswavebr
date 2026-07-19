@@ -8,6 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 interface AudioPlayerProps {
   station: RadioStation;
   isPlaying: boolean;
+  needsResume: boolean;
   onTogglePlay: () => void;
   volume: number;
   onVolumeChange: (value: number) => void;
@@ -20,6 +21,7 @@ interface AudioPlayerProps {
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   station,
   isPlaying,
+  needsResume,
   onTogglePlay,
   volume,
   onVolumeChange,
@@ -52,7 +54,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     <div 
       ref={playerRef}
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-[200]",
+        // On mobile the bottom nav sits at z-[150]; player floats above it.
+        // The CSS class `audio-player-root` handles the bottom offset via index.css.
+        "audio-player-root fixed left-0 right-0 z-[200]",
         isBrazil ? "animate-from-bottom" : "animate-in slide-in-from-bottom duration-500"
       )}
     >
@@ -115,6 +119,18 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                   >
                     Reconectar
                   </button>
+                </div>
+              )}
+              {needsResume && !isPlaying && !audioError && (
+                <div className="flex items-center gap-1.5 mt-1.5 py-0.5">
+                  <span className={cn(
+                    "inline-block w-1.5 h-1.5 rounded-full animate-pulse shrink-0",
+                    isBrazil ? "bg-[#FFDF00]" : "bg-theme-primary"
+                  )} />
+                  <span className={cn(
+                    "text-[9px] font-bold uppercase tracking-wider",
+                    isBrazil ? "text-[#FFDF00]/80" : "text-theme-primary/80"
+                  )}>Toque para retomar</span>
                 </div>
               )}
             </div>

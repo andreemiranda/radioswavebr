@@ -243,17 +243,164 @@
 .animate-active-glow    { animation: active-border-glow 2.5s ease-in-out infinite; }
 
 @layer components {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+  /* Legacy per-element class kept for compatibility */
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+}
+
+/* ─── Global scrollbar — green brand identity ────────────────────────────────
+   Scoped variables so they adapt to each theme automatically.
+   Chromium family: full ::-webkit-scrollbar API.
+   Firefox: scrollbar-width / scrollbar-color shorthand.
+   Mobile (iOS/Android native): override is skipped — OS renders its own.
+────────────────────────────────────────────────────────────────────────────── */
+
+/* Brazil / light theme defaults */
+:root,
+:root.brazil {
+  --scrollbar-width:        8px;
+  --scrollbar-track:        #F2F5F7;
+  --scrollbar-thumb:        #22C55E;   /* Tailwind green-500 — close to brand green */
+  --scrollbar-thumb-hover:  #16A34A;   /* green-600 on hover */
+  --scrollbar-thumb-active: #15803D;   /* green-700 while dragging */
+  --scrollbar-corner:       #F2F5F7;
+}
+
+/* Dark theme */
+:root.dark {
+  --scrollbar-track:        #1a2233;
+  --scrollbar-thumb:        #22C55E;
+  --scrollbar-thumb-hover:  #16A34A;
+  --scrollbar-thumb-active: #15803D;
+  --scrollbar-corner:       #1a2233;
+}
+
+/* Chromium (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet) */
+::-webkit-scrollbar {
+  width:  var(--scrollbar-width);
+  height: var(--scrollbar-width);   /* horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+  background:    var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background:    var(--scrollbar-thumb);
+  border-radius: 999px;
+  border:        2px solid var(--scrollbar-track);   /* inset look */
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:    var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background:    var(--scrollbar-thumb-active);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Mobile: hide forced scrollbar chrome (iOS/Android render their own overlay bars) */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width:  4px;
+    height: 4px;
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+}
+
+/* ─── Mobile Android-native layout ──────────────────────────────────────────
+   CSS custom property that tracks mobile bottom-nav height.
+   Used by App.tsx for content padding and by the audio player offset below.
+   Value is 0 on sm+ (≥640 px) since the bottom nav is hidden there.
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --mobile-nav-height: 0px;
+}
+
+/* Audio player: always stick to the bottom of the viewport on all screen sizes */
+.audio-player-root {
+  bottom: 0;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(var(--theme-primary), var(--theme-secondary));
-    border-radius: 10px;
+
+  /* On mobile, float the player above the bottom navigation bar */
+  .audio-player-root {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--theme-accent);
+
+  /* ── Mobile typography scale (Material Design 3 guidance) ── */
+  h1 { font-size: 2rem;   line-height: 1.2; }
+  h2 { font-size: 1.375rem; line-height: 1.3; }
+  h3 { font-size: 1.0625rem; line-height: 1.35; }
+
+  /* ── Ensure every tappable element meets the 48 dp minimum ── */
+  button, [role="button"], a {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* ── Radio cards: slightly taller touch target on mobile ── */
+  .radio-card-mobile-touch {
+    min-height: 80px;
+  }
+}
+
+/* ─── Ripple press feedback ───────────────────────────────────────────────── */
+@keyframes ripple-expand {
+  0%   { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(3.5); opacity: 0; }
+}
+
+.ripple-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-btn::after {
+  content: '';
+  display: block;
+  position: absolute;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  margin-top: -40px;
+  margin-left: -40px;
+  top: 50%;
+  left: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+}
+
+.ripple-btn:active::after {
+  animation: ripple-expand 0.45s ease-out forwards;
+}
+
+/* ─── Android-style active press scale ───────────────────────────────────── */
+@media (max-width: 639px) {
+  /* Animate tab-indicator appear on mobile bottom nav */
+  @keyframes mobile-tab-in {
+    from { width: 0; opacity: 0; }
+    to   { width: 2rem; opacity: 1; }
   }
 }

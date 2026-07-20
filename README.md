@@ -2,7 +2,7 @@
 
 Player de rádios brasileiras ao vivo. Ouça Sertanejo, Pagode, MPB, Rock, Gospel, Funk, Notícias e muito mais.
 
-🌐 **Demo:** https://radioswavebr.netlify.app/
+🌐 **Demo:** https://radioswave.netlify.app/
 
 ## Stack
 
